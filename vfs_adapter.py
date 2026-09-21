@@ -534,6 +534,61 @@ def _select_option(page, logger, wanted: str) -> bool:
     return False
 
 
+APPLICANT_FIELDS = (
+    ('given name', ('givenname', 'given-name', 'firstname', 'first-name', 'given')),
+    ('surname', ('surname', 'last-name', 'lastname', 'family')),
+    ('phone', ('phone', 'mobile', 'telephone', 'tel')),
+    ('email', ('email', 'e-mail')),
+)
+
+
+def _fill_by_name_hint(page, logger, hints, value, label) -> bool:
+    """Fill an input found by a hint in its name/id/placeholder."""
+    selectors = []
+    for hint in hints:
+        selectors.extend((
+            f'input[name*="{hint}" i]',
+            f'input[id*="{hint}" i]',
+            f'input[placeholder*="{hint}" i]',
+        ))
+    return _fill_field(page, tuple(selectors), value, logger, label)
+
+
+def fill_applicant_form(page, logger) -> bool:
+    """Fill the applicant-details form so the calendar step can be reached.
+
+    The site shows the calendar only after these details are accepted, and they must
+    match the passport for a real appointment. The monitor fills and submits this form
+    but never selects a slot and never confirms a booking.
+    """
+    values = {
+        'given name': getattr(config, 'VFS_GIVEN_NAME', ''),
+        'surname': getattr(config, 'VFS_SURNAME', ''),
+        'phone': getattr(config, 'VFS_PHONE', ''),
+        'email': getattr(config, 'VFS_EMAIL', ''),
+    }
+    missing = [label for label, value in values.items() if not value]
+    if missing:
+        logger.warning(f"Applicant details incomplete ({', '.join(missing)}) - cannot reach the calendar step")
+        return False
+
+    title = (getattr(config, 'VFS_TITLE', '') or '').strip()
+    if title:
+        _select_option(page, logger, title)
+
+    filled = True
+    for label, hints in APPLICANT_FIELDS:
+        if not _fill_by_name_hint(page, logger, hints, values[label], label):
+            logger.warning(f"Could not fill the {label} field")
+            filled = False
+
+    statement = (getattr(config, 'VFS_AUTHORIZATION_OPTION', '') or '').strip()
+    if statement:
+        _select_option(page, logger, statement)
+
+    return filled
+
+
 def _run_step(page, logger, step: str) -> None:
     """Run one step of the form 'verb:argument' (click / select / login / wait)."""
     verb, _, argument = step.partition(':')
@@ -544,6 +599,8 @@ def _run_step(page, logger, step: str) -> None:
         _click_text(page, logger, argument)
     elif verb == 'select':
         _select_option(page, logger, argument)
+    elif verb == 'applicant':
+        fill_applicant_form(page, logger)
     elif verb == 'login':
         sign_in(page, logger)
     elif verb == 'wait':

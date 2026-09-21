@@ -33,6 +33,13 @@ APPOINTMENT_TYPE = os.environ.get('APPOINTMENT_TYPE', SERVICE_KEYWORD)
 # belong in .env (gitignored) or in GitHub repository secrets - never in the repo.
 VFS_EMAIL = os.environ.get('VFS_EMAIL', '')
 VFS_PASSWORD = os.environ.get('VFS_PASSWORD', '')
+# The site asks for applicant details before it shows the calendar. Keep these in
+# .env / repository secrets as well - never in the repository itself.
+VFS_TITLE = os.environ.get('VFS_TITLE', 'MR.')
+VFS_GIVEN_NAME = os.environ.get('VFS_GIVEN_NAME', '')
+VFS_SURNAME = os.environ.get('VFS_SURNAME', '')
+VFS_PHONE = os.environ.get('VFS_PHONE', '')
+VFS_AUTHORIZATION_OPTION = os.environ.get('VFS_AUTHORIZATION_OPTION', 'I confirm the above statement')
 LOGIN_ENABLED = os.environ.get('LOGIN_ENABLED', 'True').lower() in ('1', 'true', 'yes')
 LOGIN_WAIT_SECONDS = int(os.environ.get('LOGIN_WAIT_SECONDS', 12))
 

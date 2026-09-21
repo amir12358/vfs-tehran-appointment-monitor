@@ -7,8 +7,10 @@ name: VFS Tehran appointment monitor
 #      whether the site accepts a non-NL address at all.
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  # The automatic schedule is switched off while the flow is being confirmed, so the
+  # site is not hammered with incomplete runs. Re-enable when the flow is verified:
+  #   schedule:
+  #     - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       flow_steps:
@@ -31,6 +33,10 @@ jobs:
       TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
       VFS_EMAIL: ${{ secrets.VFS_EMAIL }}
       VFS_PASSWORD: ${{ secrets.VFS_PASSWORD }}
+      VFS_TITLE: ${{ secrets.VFS_TITLE }}
+      VFS_GIVEN_NAME: ${{ secrets.VFS_GIVEN_NAME }}
+      VFS_SURNAME: ${{ secrets.VFS_SURNAME }}
+      VFS_PHONE: ${{ secrets.VFS_PHONE }}
       FLOW_STEPS: ${{ github.event.inputs.flow_steps }}
       TASK_SCHEDULER_MODE: 'True'
       # A real display (virtual screen) is far less suspicious than headless mode.
