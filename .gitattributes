@@ -1,0 +1,4 @@
+# Keep the shell scripts Unix-formatted, even when edited on Windows.
+# (A CRLF .sh file fails on Linux with "$'\\r': command not found".)
+*.sh text eol=lf
+*.bat text eol=crlf

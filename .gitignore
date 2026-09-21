@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Application specific
+appointment_monitor.log
+last_appointment_state.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Site-monitor artifacts
+vfs_monitor.log
+vfs_state.json
+vfs_monitor.lock
+recon_out/
+screenshots/
+storage_state.json
+.venv/
+.browser_profile/

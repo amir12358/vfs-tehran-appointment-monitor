@@ -1,0 +1,13 @@
+requests==2.31.0
+beautifulsoup4==4.12.2
+# Modern python-telegram-bot is required on Python 3.14: the old 20.3 pin pulls in
+# httpx ~=0.24, whose httpcore cannot even import on 3.14.
+python-telegram-bot>=21,<23
+APScheduler==3.10.4
+playwright>=1.52.0,<2
+colorama==0.4.6
+python-dotenv==1.0.0
+dateparser==1.1.8
+portalocker==2.7.0
+pytest==7.4.0
+pytest-cov==4.1.0
