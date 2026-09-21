@@ -11,8 +11,8 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
-      flow_clicks:
-        description: 'Texts to click in order before reading the page (comma separated)'
+      flow_steps:
+        description: 'Steps before reading the page, e.g. click:Make an appointment|select:MVV|click:Continue'
         required: false
         default: ''
 
@@ -31,7 +31,7 @@ jobs:
       TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
       VFS_EMAIL: ${{ secrets.VFS_EMAIL }}
       VFS_PASSWORD: ${{ secrets.VFS_PASSWORD }}
-      FLOW_CLICKS: ${{ github.event.inputs.flow_clicks }}
+      FLOW_STEPS: ${{ github.event.inputs.flow_steps }}
       TASK_SCHEDULER_MODE: 'True'
       # A real display (virtual screen) is far less suspicious than headless mode.
       PLAYWRIGHT_HEADLESS: 'False'

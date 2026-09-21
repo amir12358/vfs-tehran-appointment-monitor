@@ -118,10 +118,13 @@ SELENIUM_RETRIES = int(os.environ.get('SELENIUM_RETRIES', 2))
 # the bundled Chromium. Set BROWSER_CHANNEL= (empty) to use bundled Chromium.
 BROWSER_CHANNEL = os.environ.get('BROWSER_CHANNEL', 'chrome')
 PLAYWRIGHT_HEADLESS = os.environ.get('PLAYWRIGHT_HEADLESS', 'True').lower() in ('1', 'true', 'yes')
-# Steps to walk on the VFS site before the calendar is read: comma-separated visible
-# texts, clicked in order when found. An empty value keeps the default below.
-_flow_clicks_env = os.environ.get('FLOW_CLICKS', '').strip()
-FLOW_CLICKS = [part.strip() for part in (_flow_clicks_env or 'Make an appointment').split(',') if part.strip()]
+# Steps walked on the VFS site before the calendar is read ("|" separated, in order):
+#   click:<visible text>   select:<option text>   login   wait:<seconds>
+# An empty value keeps the default below. Retune this remotely for a manual run:
+#   gh workflow run vfs-monitor.yml -f "flow_steps=click:Make an appointment|select:MVV|click:Continue"
+_flow_steps_env = os.environ.get('FLOW_STEPS', '').strip()
+_default_flow_steps = 'click:Make an appointment|select:MVV|click:Continue'
+FLOW_STEPS = [part.strip() for part in (_flow_steps_env or _default_flow_steps).split('|') if part.strip()]
 # How much page text each navigation step writes to the log (for remote diagnosis).
 FLOW_LOG_CHARS = int(os.environ.get('FLOW_LOG_CHARS', 600))
 # Extra cycles (with a reload) to give the site time to render the calendar.

@@ -502,13 +502,70 @@ def _log_page_summary(page, logger, label: str) -> None:
         logger.debug(f"Could not summarise the page: {exc}")
 
 
-def advance_flow(page, logger) -> None:
-    """Walk the site before the calendar is read: navigation steps, then sign-in.
+def _select_option(page, logger, wanted: str) -> bool:
+    """Choose an option in the first dropdown that offers a matching choice."""
+    wanted_low = wanted.strip().lower()
+    try:
+        selects = page.locator('select')
+        total = selects.count()
+    except Exception:
+        total = 0
 
-    The real flow could not be observed from the Netherlands (that address is refused),
-    so this is built from the diagnostics each run reports: steps are read from
-    config.FLOW_CLICKS and every step logs what the next page looks like. Nothing here
-    ever raises - a changed page is logged and the caller classifies what is on screen.
+    for index in range(total):
+        element = selects.nth(index)
+        try:
+            options = element.evaluate("el => Array.from(el.options).map(o => (o.text || '').trim())")
+        except Exception:
+            continue
+        exact = [option for option in options if option.lower() == wanted_low]
+        partial = [option for option in options if wanted_low and wanted_low in option.lower()]
+        choice = (exact or partial or [None])[0]
+        if not choice:
+            continue
+        try:
+            element.select_option(label=choice)
+            logger.info(f"Selected '{choice}' (dropdown #{index})")
+            page.wait_for_timeout(max(1, int(getattr(config, 'FLOW_SETTLE_SECONDS', 6))) * 1000)
+            return True
+        except Exception as exc:
+            logger.warning(f"Could not select '{choice}': {exc}")
+
+    logger.warning(f"No dropdown offered an option matching '{wanted}'")
+    return False
+
+
+def _run_step(page, logger, step: str) -> None:
+    """Run one step of the form 'verb:argument' (click / select / login / wait)."""
+    verb, _, argument = step.partition(':')
+    verb = verb.strip().lower()
+    argument = argument.strip()
+
+    if verb == 'click':
+        _click_text(page, logger, argument)
+    elif verb == 'select':
+        _select_option(page, logger, argument)
+    elif verb == 'login':
+        sign_in(page, logger)
+    elif verb == 'wait':
+        try:
+            page.wait_for_timeout(max(0.0, float(argument)) * 1000)
+            logger.info(f"Waited {argument}s")
+        except Exception:
+            logger.debug(f"Invalid wait step: {step}")
+    else:
+        logger.warning(f"Unknown flow step: '{step}'")
+
+
+def advance_flow(page, logger) -> None:
+    """Walk the real booking flow before the page is read.
+
+    Steps come from config.FLOW_STEPS, for example:
+        click:Make an appointment|select:MVV|click:Continue|wait:5|login
+
+    The Netherlands is refused by the site, so this flow was built from the
+    diagnostics of real runs: every step logs what the next page looks like, which
+    makes it possible to extend the flow remotely from a single log. Nothing here
+    raises, and the monitor never confirms or books an appointment.
     """
     if not getattr(config, 'LOGIN_ENABLED', True):
         logger.debug("LOGIN_ENABLED is off - reading the page as it is")
@@ -516,14 +573,16 @@ def advance_flow(page, logger) -> None:
 
     _log_page_summary(page, logger, 'start')
 
-    for step in getattr(config, 'FLOW_CLICKS', []):
-        _click_text(page, logger, step)
+    steps = getattr(config, 'FLOW_STEPS', [])
+    for step in steps:
+        _run_step(page, logger, step)
         _log_page_summary(page, logger, f'after: {step}')
 
-    if getattr(config, 'VFS_EMAIL', '') and getattr(config, 'VFS_PASSWORD', ''):
+    has_credentials = bool(getattr(config, 'VFS_EMAIL', '') and getattr(config, 'VFS_PASSWORD', ''))
+    if has_credentials and not any(step.lower().startswith('login') for step in steps):
         sign_in(page, logger)
         _log_page_summary(page, logger, 'after: sign-in')
-    else:
+    elif not has_credentials:
         logger.debug("advance_flow: no credentials configured, no sign-in attempted")
 
 
