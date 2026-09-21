@@ -59,7 +59,12 @@ jobs:
           restore-keys: |
             vfs-state-
 
-      - name: Run one check cycle
+      - name: Run one check cycle (manual - ignores the wait window)
+        if: github.event_name == 'workflow_dispatch'
+        run: xvfb-run -a python monitor.py --once --force
+
+      - name: Run one check cycle (scheduled)
+        if: github.event_name != 'workflow_dispatch'
         run: xvfb-run -a python monitor.py --once
 
       - name: Upload diagnostics

@@ -522,8 +522,12 @@ class AppointmentMonitor:
             scheduler.shutdown()
             logger.info("Appointment monitor stopped")
 
-    def run_once_with_lock(self) -> int:
-        """Run a single cycle with overlap protection and a useful process exit code."""
+    def run_once_with_lock(self, force: bool = False) -> int:
+        """Run a single cycle with overlap protection and a useful process exit code.
+
+        force=True ignores the randomized interval; used for manual runs and for the
+        very first check after a deployment.
+        """
         guard = SingleInstanceGuard(LOCK_FILE_PATH)
         if not guard.acquire():
             logger.warning("Another monitor instance is already running; skipping this execution.")
@@ -531,7 +535,7 @@ class AppointmentMonitor:
 
         started_at = datetime.now()
         try:
-            if not self.should_run_check_now():
+            if not force and not self.should_run_check_now():
                 return 0
             self.run_check()
             duration = (datetime.now() - started_at).total_seconds()
@@ -553,6 +557,7 @@ def main():
     parser = argparse.ArgumentParser(description="Monitor VFS Netherlands (Tehran) appointment availability.")
     parser.add_argument("--test", action="store_true", help="Run one check and keep normal logging.")
     parser.add_argument("--once", action="store_true", help="Run one check and exit. Best mode for Windows Task Scheduler.")
+    parser.add_argument("--force", action="store_true", help="Ignore the randomized interval and run the check now.")
     parser.add_argument("--scheduler", action="store_true", help="Run continuously using APScheduler.")
     parser.add_argument("--task-scheduler", action="store_true", help="Alias for --once with minimal console noise.")
     args = parser.parse_args()
@@ -579,13 +584,13 @@ def main():
     
     if args.test:
         logger.info("TEST MODE: Running single check and exiting...")
-        exit_code = monitor.run_once_with_lock()
+        exit_code = monitor.run_once_with_lock(force=args.force)
         logger.info("Test completed. Check the logs above for results.")
         return exit_code
 
     if run_once:
         logger.info("RUN ONCE MODE: Starting a single Task Scheduler-friendly check...")
-        return monitor.run_once_with_lock()
+        return monitor.run_once_with_lock(force=args.force)
 
     if scheduler_mode:
         logger.info("Running initial check...")
@@ -596,7 +601,7 @@ def main():
         return 0
 
     logger.info("No mode specified; defaulting to single-run mode. Use --scheduler for continuous execution.")
-    return monitor.run_once_with_lock()
+    return monitor.run_once_with_lock(force=args.force)
 
 
 if __name__ == "__main__":
