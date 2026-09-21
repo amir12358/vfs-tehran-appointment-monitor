@@ -118,6 +118,15 @@ SELENIUM_RETRIES = int(os.environ.get('SELENIUM_RETRIES', 2))
 # the bundled Chromium. Set BROWSER_CHANNEL= (empty) to use bundled Chromium.
 BROWSER_CHANNEL = os.environ.get('BROWSER_CHANNEL', 'chrome')
 PLAYWRIGHT_HEADLESS = os.environ.get('PLAYWRIGHT_HEADLESS', 'True').lower() in ('1', 'true', 'yes')
+# Steps to walk on the VFS site before the calendar is read: comma-separated visible
+# texts, clicked in order when found. An empty value keeps the default below.
+_flow_clicks_env = os.environ.get('FLOW_CLICKS', '').strip()
+FLOW_CLICKS = [part.strip() for part in (_flow_clicks_env or 'Make an appointment').split(',') if part.strip()]
+# How much page text each navigation step writes to the log (for remote diagnosis).
+FLOW_LOG_CHARS = int(os.environ.get('FLOW_LOG_CHARS', 600))
+# Extra cycles (with a reload) to give the site time to render the calendar.
+FLOW_SETTLE_SECONDS = int(os.environ.get('FLOW_SETTLE_SECONDS', 6))
+
 # Optional saved login session (only needed if availability sits behind a login).
 PLAYWRIGHT_STORAGE_STATE = os.environ.get('PLAYWRIGHT_STORAGE_STATE', '')
 # Optional outbound proxy for the browser, e.g. a country-specific endpoint:

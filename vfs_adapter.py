@@ -450,27 +450,81 @@ def sign_in(page, logger) -> bool:
     return True
 
 
+def _click_text(page, logger, text: str) -> bool:
+    """Click the first link/button whose visible text matches `text`."""
+    candidates = (
+        f'a:has-text("{text}")',
+        f'button:has-text("{text}")',
+        f'input[value="{text}"]',
+        f'input[value*="{text}" i]',
+        f'text="{text}"',
+    )
+    selector = _first_visible(page, candidates)
+    if not selector:
+        logger.warning(f"Step not found on this page: '{text}'")
+        return False
+    try:
+        page.locator(selector).first.click()
+        page.wait_for_timeout(max(1, int(getattr(config, 'FLOW_SETTLE_SECONDS', 6))) * 1000)
+        logger.info(f"Clicked '{text}' ({selector})")
+        return True
+    except Exception as exc:
+        logger.warning(f"Could not click '{text}' ({selector}): {exc}")
+        return False
+
+
+def _log_page_summary(page, logger, label: str) -> None:
+    """Log a short description of the current page so the next step can be planned."""
+    try:
+        controls = []
+        for selector in ('a', 'button', 'input[type=submit]', 'input[type=text]', 'input[type=password]', 'select'):
+            try:
+                for element in page.locator(selector).all()[:10]:
+                    text = ''
+                    try:
+                        text = (element.inner_text() or '').strip()
+                    except Exception:
+                        text = ''
+                    if not text:
+                        try:
+                            text = (element.get_attribute('value') or '').strip()
+                        except Exception:
+                            text = ''
+                    if text:
+                        controls.append(text[:40])
+            except Exception:
+                continue
+        logger.info(f"[{label}] title={page.title()!r} url={page.url[:120]}")
+        logger.info(f"[{label}] controls={controls[:18]}")
+        body = page.locator('body').inner_text()
+        logger.info(f"[{label}] text={body[:int(getattr(config, 'FLOW_LOG_CHARS', 600))]!r}")
+    except Exception as exc:
+        logger.debug(f"Could not summarise the page: {exc}")
+
+
 def advance_flow(page, logger) -> None:
-    """Extra navigation before the page is read: signing in, then country/centre steps.
+    """Walk the site before the calendar is read: navigation steps, then sign-in.
 
-    The live flow could not be observed from outside the country the site allows, so
-    everything here is guarded and logged. Add further clicks next to the sign-in call,
-    for example:
-
-        page.get_by_role('link', name='Netherlands').click()
-
-    If the site asks for a code sent by e-mail or SMS, that cannot be automated - the
-    page is then classified as login_required and you are told, rather than failing
-    silently.
+    The real flow could not be observed from the Netherlands (that address is refused),
+    so this is built from the diagnostics each run reports: steps are read from
+    config.FLOW_CLICKS and every step logs what the next page looks like. Nothing here
+    ever raises - a changed page is logged and the caller classifies what is on screen.
     """
     if not getattr(config, 'LOGIN_ENABLED', True):
         logger.debug("LOGIN_ENABLED is off - reading the page as it is")
         return
 
+    _log_page_summary(page, logger, 'start')
+
+    for step in getattr(config, 'FLOW_CLICKS', []):
+        _click_text(page, logger, step)
+        _log_page_summary(page, logger, f'after: {step}')
+
     if getattr(config, 'VFS_EMAIL', '') and getattr(config, 'VFS_PASSWORD', ''):
         sign_in(page, logger)
+        _log_page_summary(page, logger, 'after: sign-in')
     else:
-        logger.debug("advance_flow: no credentials configured, no extra steps")
+        logger.debug("advance_flow: no credentials configured, no sign-in attempted")
 
 
 def check_availability(url: str, logger) -> Tuple[str, Optional[Dict], Optional[str]]:
